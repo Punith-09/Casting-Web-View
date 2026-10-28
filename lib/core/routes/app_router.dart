@@ -47,13 +47,17 @@ import '../../features/subscription/presentation/pages/subscription_screen.dart'
 import '../../features/stories/presentation/pages/story_upload_screen.dart';
 import '../../features/home/data/repository/home_repository.dart';
 import '../../features/live_stats/presentation/pages/live_stats_screen.dart';
+import '../../features/messages/data/repository/messages_repository.dart';
 import '../../core/di/injection_container.dart';
 
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
 final GoRouter appRouter = GoRouter(
+  navigatorKey: rootNavigatorKey,
   initialLocation: AppRoutes.welcome,
   redirect: (context, state) {
     final isLoggedIn = LocalStorage.instance.hasToken();
-    final location = state.uri.path;
+    final location = state.uri.toString();
 
     final isAuthRoute =
         location == AppRoutes.welcome ||
@@ -76,104 +80,17 @@ final GoRouter appRouter = GoRouter(
     return null; // no redirect needed
   },
 
-  errorBuilder: (context, state) {
-    debugPrint('🌿 [AppRouter] Handled route error for: ${state.uri}');
-    final uriStr = state.uri.toString().toLowerCase();
-    if (uriStr.contains('delete') && uriStr.contains('account')) {
-      return const DeleteAccountScreen();
-    }
-
-    if (uriStr.contains('reset') && uriStr.contains('password')) {
-      final token = state.uri.queryParameters['token'] ??
-          state.uri.queryParameters['deep_link_sub1'] ??
-          state.uri.queryParameters['deep_link_sub2'] ??
-          state.uri.queryParameters['otp'];
-      final email = state.uri.queryParameters['email'];
-      return ForgotPasswordScreen(token: token, initialEmail: email);
-    }
-
-    final id = state.uri.queryParameters['id'] ??
-        state.uri.queryParameters['profile_id'] ??
-        state.uri.queryParameters['deep_link_value'];
-
-    if (id != null && id.trim().isNotEmpty) {
-      return ExploreProfileScreen(userId: id.trim());
-    }
-
-    final isLoggedIn = LocalStorage.instance.hasToken();
-    return isLoggedIn ? const HomeScreen() : const WelcomeScreen();
-  },
-
   routes: [
-    GoRoute(
-      path: '/',
-      redirect: (_, __) =>
-          LocalStorage.instance.hasToken() ? AppRoutes.home : AppRoutes.welcome,
-    ),
-    GoRoute(
-      path: '/profile',
-      builder: (context, state) {
-        final id = state.uri.queryParameters['id'] ??
-            state.uri.queryParameters['profile_id'] ??
-            state.uri.queryParameters['deep_link_value'];
-        if (id != null && id.trim().isNotEmpty) {
-          return ExploreProfileScreen(userId: id.trim());
-        }
-        return const HomeScreen();
-      },
-    ),
-    GoRoute(
-      path: '/delete-account',
-      redirect: (_, __) => AppRoutes.deleteAccount,
-    ),
-    GoRoute(
-      path: '/delete_account',
-      redirect: (_, __) => AppRoutes.deleteAccount,
-    ),
-    GoRoute(
-      path: '/auth/reset-password',
-      builder: (context, state) {
-        final token = state.uri.queryParameters['token'] ??
-            state.uri.queryParameters['deep_link_sub1'] ??
-            state.uri.queryParameters['deep_link_sub2'] ??
-            state.uri.queryParameters['otp'];
-        final email = state.uri.queryParameters['email'];
-        return ForgotPasswordScreen(token: token, initialEmail: email);
-      },
-    ),
-    GoRoute(
-      path: '/reset-password',
-      builder: (context, state) {
-        final token = state.uri.queryParameters['token'] ??
-            state.uri.queryParameters['deep_link_sub1'] ??
-            state.uri.queryParameters['deep_link_sub2'] ??
-            state.uri.queryParameters['otp'];
-        final email = state.uri.queryParameters['email'];
-        return ForgotPasswordScreen(token: token, initialEmail: email);
-      },
-    ),
-    GoRoute(
-      path: '/reset_password',
-      builder: (context, state) {
-        final token = state.uri.queryParameters['token'] ??
-            state.uri.queryParameters['deep_link_sub1'] ??
-            state.uri.queryParameters['deep_link_sub2'] ??
-            state.uri.queryParameters['otp'];
-        final email = state.uri.queryParameters['email'];
-        return ForgotPasswordScreen(token: token, initialEmail: email);
-      },
-    ),
+
     GoRoute(path: AppRoutes.welcome, builder: (_, __) => const WelcomeScreen()),
+    GoRoute(path: AppRoutes.welcome  , builder: (_, __) => const WelcomeScreen()),
 
     GoRoute(path: AppRoutes.login, builder: (_, __) => const LoginScreen()),
     GoRoute(path: AppRoutes.signup, builder: (_, __) => const SignupScreen()),
     GoRoute(
       path: AppRoutes.forgotPassword,
       builder: (context, state) {
-        final token = state.uri.queryParameters['token'] ??
-            state.uri.queryParameters['deep_link_sub1'] ??
-            state.uri.queryParameters['deep_link_sub2'] ??
-            state.uri.queryParameters['otp'];
+        final token = state.uri.queryParameters['token'] ?? state.uri.queryParameters['otp'];
         final email = state.uri.queryParameters['email'];
         return ForgotPasswordScreen(token: token, initialEmail: email);
       },
@@ -196,32 +113,21 @@ final GoRouter appRouter = GoRouter(
         if (extra is ChatModel) {
           return ChatScreen(chat: extra);
         }
-
-        final chatId = state.uri.queryParameters['chatId'] ??
-            state.uri.queryParameters['id'] ??
-            '';
-        final participantId = state.uri.queryParameters['userId'] ??
-            state.uri.queryParameters['participantId'] ??
-            '';
-        final participantName = state.uri.queryParameters['name'] ?? '';
-        final participantAvatar = state.uri.queryParameters['avatar'] ?? '';
-        final participantRole = state.uri.queryParameters['role'] ?? '';
-
-        if (chatId.isNotEmpty || participantId.isNotEmpty) {
+        if (extra is String && extra.isNotEmpty) {
           return ChatScreen(
-            chat: ChatModel(
-              id: chatId,
-              participantId: participantId,
-              participantName: participantName,
-              participantAvatar: participantAvatar,
-              participantRole: participantRole,
-              lastMessage: '',
-              lastMessageAt: '',
-              unreadCount: 0,
-            ),
+            chat: ChatModel(id: extra, participantId: ''),
           );
         }
-
+        if (extra is Map) {
+          final chatId = extra['chatId']?.toString() ?? '';
+          final participantId = extra['participantId']?.toString() ?? '';
+          if (chatId.isNotEmpty) {
+            return ChatScreen(
+              chat: ChatModel(id: chatId, participantId: participantId),
+            );
+          }
+          return _ChatOpenScreen(participantId: participantId);
+        }
         return const ChatScreen();
       },
     ),
@@ -285,6 +191,21 @@ final GoRouter appRouter = GoRouter(
       },
     ),
 
+    // =========================================================
+    // UPLOAD PHOTO
+    // =========================================================
+    GoRoute(
+      path: AppRoutes.uploadPhoto,
+      builder: (_, __) => const UploadPhotoScreen(),
+    ),
+
+    // =========================================================
+    // UPLOAD VIDEO
+    // =========================================================
+    GoRoute(
+      path: AppRoutes.uploadVideo,
+      builder: (_, __) => const UploadVideoScreen(),
+    ),
 
     // =========================================================
     // APPLIED AUDITIONS
@@ -315,29 +236,12 @@ final GoRouter appRouter = GoRouter(
       path: AppRoutes.watchVideo,
       builder: (context, state) {
         final extra = state.extra;
-        final focusComment = state.uri.queryParameters['focusComment'] == 'true';
         if (extra is FeedPostModel) {
-          return WatchMediaScreen(
-            post: extra,
-            autoFocusComment: focusComment,
-          );
-        }
-        if (extra is Map<String, dynamic>) {
-          final post = extra['post'];
-          final autoFocus = extra['autoFocusComment'] as bool? ?? focusComment;
-          if (post is FeedPostModel) {
-            return WatchMediaScreen(
-              post: post,
-              autoFocusComment: autoFocus,
-            );
-          }
+          return WatchMediaScreen(post: extra);
         }
         // Notification tap passes a String post/video ID
         if (extra is String && extra.isNotEmpty) {
-          return _PostLoaderScreen(
-            postId: extra,
-            autoFocusComment: focusComment,
-          );
+          return _PostLoaderScreen(postId: extra);
         }
         return const Scaffold(body: Center(child: Text('Media not found')));
       },
@@ -385,22 +289,6 @@ final GoRouter appRouter = GoRouter(
         // POST
         // -----------------------------------------------------
         GoRoute(path: AppRoutes.post, builder: (_, __) => const PostScreen()),
-
-        // -----------------------------------------------------
-        // UPLOAD PHOTO
-        // -----------------------------------------------------
-        GoRoute(
-          path: AppRoutes.uploadPhoto,
-          builder: (_, __) => const UploadPhotoScreen(),
-        ),
-
-        // -----------------------------------------------------
-        // UPLOAD VIDEO
-        // -----------------------------------------------------
-        GoRoute(
-          path: AppRoutes.uploadVideo,
-          builder: (_, __) => const UploadVideoScreen(),
-        ),
 
         // -----------------------------------------------------
         // AUDITIONS
@@ -591,11 +479,7 @@ class _MainScreenState extends State<MainScreen> {
 
 class _PostLoaderScreen extends StatefulWidget {
   final String postId;
-  final bool autoFocusComment;
-  const _PostLoaderScreen({
-    required this.postId,
-    this.autoFocusComment = false,
-  });
+  const _PostLoaderScreen({required this.postId});
 
   @override
   State<_PostLoaderScreen> createState() => _PostLoaderScreenState();
@@ -621,10 +505,7 @@ class _PostLoaderScreenState extends State<_PostLoaderScreen> {
       if (post != null) {
         // Use go() instead of replace() — replacing with the same path (/watchVideo)
         // causes a GoRouter key reservation conflict.
-        final uri = widget.autoFocusComment
-            ? '${AppRoutes.watchVideo}?focusComment=true'
-            : AppRoutes.watchVideo;
-        context.go(uri, extra: post);
+        context.go(AppRoutes.watchVideo, extra: post);
       } else {
         _showError();
       }
@@ -666,6 +547,61 @@ class _PostLoaderScreenState extends State<_PostLoaderScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ChatOpenScreen extends StatefulWidget {
+  final String participantId;
+
+  const _ChatOpenScreen({required this.participantId});
+
+  @override
+  State<_ChatOpenScreen> createState() => _ChatOpenScreenState();
+}
+
+class _ChatOpenScreenState extends State<_ChatOpenScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _open();
+    });
+  }
+
+  Future<void> _open() async {
+    try {
+      if (widget.participantId.isEmpty) {
+        _fail();
+        return;
+      }
+      final chat =
+          await sl<MessagesRepository>().startChat(widget.participantId);
+      if (!mounted) return;
+      context.go(AppRoutes.chat, extra: chat);
+    } catch (_) {
+      if (mounted) _fail();
+    }
+  }
+
+  void _fail() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Could not open chat. Please try again.'),
+        backgroundColor: Colors.redAccent,
+      ),
+    );
+    if (Navigator.of(context).canPop()) context.pop();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF0F172A) : Colors.white,
+      body: const Center(
+        child: CircularProgressIndicator(color: Color(0xFF4AD0FB)),
       ),
     );
   }
