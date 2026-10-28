@@ -17,6 +17,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../../../core/services/branch_service.dart';
+import '../../../../core/routes/app_router.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../presentation/providers/profile_provider.dart';
 import '../../../home/presentation/providers/home_feed_provider.dart';
@@ -61,7 +62,6 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen>
     final profileProvider = context.read<ProfileProvider>();
     final homeFeedProvider = context.read<HomeFeedProvider>();
     final exploreProvider = context.read<ExploreProvider>();
-    final router = GoRouter.of(context);
 
     // ── Confirmation dialog ─────────────────────────────────
     final confirmed = await showDialog<bool>(
@@ -209,18 +209,16 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen>
       debugPrint('Logout error: $e');
     }
 
-// Clear user-specific providers.
+    // Clear user-specific providers.
     profileProvider.clear();
     homeFeedProvider.clear();
     exploreProvider.clearForLogout();
 
-    if (!mounted) return;
-
-// Navigate after the current frame, especially for Flutter Web.
+    // Wait for the frame triggered by provider.clear() → notifyListeners() to
+    // complete before navigating. We use the global appRouter (not a
+    // context-captured router), so no mounted check is needed — this always fires.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-
-      router.go(AppRoutes.login);
+      appRouter.go(AppRoutes.login);
     });
   }
 

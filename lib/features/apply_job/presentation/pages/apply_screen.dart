@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../../../../common/widgets/app_background.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/responsive/responsive_breakpoints.dart';
 
 import '../../data/models/application_model.dart';
 import '../providers/apply_job_provider.dart';
@@ -348,7 +349,8 @@ class _ApplyScreenState extends State<ApplyScreen> {
         body: SafeArea(
           child: Consumer<ApplyJobProvider>(
             builder: (context, provider, child) {
-              return Column(
+              final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+              final content = Column(
                 children: [
                   // =================================================
                   // APP BAR
@@ -461,6 +463,17 @@ class _ApplyScreenState extends State<ApplyScreen> {
                   ),
                 ],
               );
+
+              if (isDesktop) {
+                return Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 780),
+                    child: content,
+                  ),
+                );
+              }
+
+              return content;
             },
           ),
         ),

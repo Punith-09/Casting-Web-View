@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../common/widgets/app_background.dart';
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/responsive/responsive_breakpoints.dart';
+import '../../../../core/routes/app_routes.dart';
 import '../providers/apply_job_provider.dart';
 
 class AppliedAuditionsScreen extends StatefulWidget {
@@ -13,6 +16,8 @@ class AppliedAuditionsScreen extends StatefulWidget {
 }
 
 class _AppliedAuditionsScreenState extends State<AppliedAuditionsScreen> {
+  String _selectedStatusFilter = 'ALL';
+
   @override
   void initState() {
     super.initState();
@@ -332,6 +337,26 @@ class _AppliedAuditionsScreenState extends State<AppliedAuditionsScreen> {
                 ),
               );
 
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+
+    if (isDesktop) {
+      return Scaffold(
+        backgroundColor:
+            isDark ? const Color(0xFF0B0F17) : const Color(0xFFF1F5F9),
+        body: SafeArea(
+          child: _buildDesktopLayout(
+            context,
+            provider,
+            isDark,
+            titleColor,
+            subtitleColor,
+            cardBg,
+            cardBorder,
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(
@@ -352,6 +377,456 @@ class _AppliedAuditionsScreenState extends State<AppliedAuditionsScreen> {
         child: SafeArea(
           bottom: false,
           child: body,
+        ),
+      ),
+    );
+  }
+
+  // ===========================================================================
+  // DESKTOP LAYOUT (Web View)
+  // ===========================================================================
+
+  Widget _buildDesktopLayout(
+    BuildContext context,
+    ApplyJobProvider provider,
+    bool isDark,
+    Color titleColor,
+    Color subtitleColor,
+    Color cardBg,
+    Color cardBorder,
+  ) {
+    final allApps = provider.applications;
+    final filteredApps = _selectedStatusFilter == 'ALL'
+        ? allApps
+        : allApps
+            .where((a) =>
+                a.status.trim().toUpperCase() == _selectedStatusFilter)
+            .toList();
+
+    final pendingCount = allApps
+        .where((a) => a.status.trim().toUpperCase() == 'PENDING')
+        .length;
+    final shortlistedCount = allApps
+        .where((a) => a.status.trim().toUpperCase() == 'SHORTLISTED')
+        .length;
+    final rejectedCount = allApps
+        .where((a) => a.status.trim().toUpperCase() == 'REJECTED')
+        .length;
+
+    return Column(
+      children: [
+        // Desktop Top Bar
+        Container(
+          height: 64,
+          padding: const EdgeInsets.symmetric(horizontal: 28),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF161C26) : Colors.white,
+            border: Border(
+              bottom: BorderSide(
+                color: isDark
+                    ? const Color(0xFF263040)
+                    : const Color(0xFFE2E8F0),
+                width: 1,
+              ),
+            ),
+          ),
+          child: Center(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 960),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  InkWell(
+                    onTap: () {
+                      if (Navigator.of(context).canPop()) {
+                        context.pop();
+                      } else {
+                        context.go(AppRoutes.auditions);
+                      }
+                    },
+                    borderRadius: BorderRadius.circular(10),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 8),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.arrow_back_ios_new_rounded,
+                            size: 16,
+                            color: titleColor,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Back to Auditions',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: titleColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Text(
+                    'Applied Auditions',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w700,
+                      color: titleColor,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '${allApps.length} Applications',
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+
+        // Main Content Area
+        Expanded(
+          child: provider.isFetchingApplications
+              ? const Center(
+                  child: CircularProgressIndicator(color: AppColors.primary),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 32, vertical: 28),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 960),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Status Filter Tabs
+                          Row(
+                            children: [
+                              _buildStatusFilterChip(
+                                label: 'All (${allApps.length})',
+                                filterKey: 'ALL',
+                                isDark: isDark,
+                              ),
+                              const SizedBox(width: 10),
+                              _buildStatusFilterChip(
+                                label: 'Pending ($pendingCount)',
+                                filterKey: 'PENDING',
+                                isDark: isDark,
+                              ),
+                              const SizedBox(width: 10),
+                              _buildStatusFilterChip(
+                                label: 'Shortlisted ($shortlistedCount)',
+                                filterKey: 'SHORTLISTED',
+                                isDark: isDark,
+                              ),
+                              const SizedBox(width: 10),
+                              _buildStatusFilterChip(
+                                label: 'Rejected ($rejectedCount)',
+                                filterKey: 'REJECTED',
+                                isDark: isDark,
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          if (filteredApps.isEmpty)
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(
+                                  vertical: 48, horizontal: 24),
+                              decoration: BoxDecoration(
+                                color: cardBg,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                    color: cardBorder, width: 1),
+                              ),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.assignment_outlined,
+                                    size: 48,
+                                    color: subtitleColor.withValues(alpha: 0.6),
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Text(
+                                    _selectedStatusFilter == 'ALL'
+                                        ? 'No Applications Yet'
+                                        : 'No $_selectedStatusFilter Applications',
+                                    style: TextStyle(
+                                      color: titleColor,
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    'Auditions you apply for will appear here with live review statuses.',
+                                    style: TextStyle(
+                                      color: subtitleColor,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            ...filteredApps.map((app) {
+                              final statusColor = _statusColor(app.status);
+                              final statusIcon = _statusIcon(app.status);
+                              final dateStr = app.appliedDate.isNotEmpty
+                                  ? app.appliedDate.split('T').first
+                                  : null;
+
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 16),
+                                decoration: BoxDecoration(
+                                  color: cardBg,
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(
+                                      color: cardBorder, width: 1),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                          alpha: isDark ? 0.25 : 0.04),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                                ),
+                                child: Padding(
+                                  padding: const EdgeInsets.all(22),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  app.auditionTitle.isNotEmpty
+                                                      ? app.auditionTitle
+                                                      : 'Untitled Audition',
+                                                  style: TextStyle(
+                                                    color: titleColor,
+                                                    fontSize: 17,
+                                                    fontWeight:
+                                                        FontWeight.w700,
+                                                  ),
+                                                ),
+                                                if (app.role.isNotEmpty) ...[
+                                                  const SizedBox(height: 6),
+                                                  Row(
+                                                    children: [
+                                                      Icon(
+                                                        Icons
+                                                            .person_outline_rounded,
+                                                        size: 14,
+                                                        color:
+                                                            AppColors.primary,
+                                                      ),
+                                                      const SizedBox(width: 6),
+                                                      Text(
+                                                        app.role,
+                                                        style: const TextStyle(
+                                                          color:
+                                                              AppColors.primary,
+                                                          fontSize: 13,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          Container(
+                                            padding:
+                                                const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: statusColor
+                                                  .withValues(alpha: 0.14),
+                                              borderRadius:
+                                                  BorderRadius.circular(20),
+                                              border: Border.all(
+                                                color: statusColor
+                                                    .withValues(alpha: 0.3),
+                                              ),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                Icon(statusIcon,
+                                                    color: statusColor,
+                                                    size: 14),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  app.status.toUpperCase(),
+                                                  style: TextStyle(
+                                                    color: statusColor,
+                                                    fontSize: 11.5,
+                                                    fontWeight:
+                                                        FontWeight.w700,
+                                                    letterSpacing: 0.4,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+
+                                      const SizedBox(height: 16),
+                                      Divider(color: cardBorder, height: 1),
+                                      const SizedBox(height: 14),
+
+                                      Row(
+                                        children: [
+                                          if (dateStr != null) ...[
+                                            Icon(
+                                              Icons.calendar_today_outlined,
+                                              size: 13,
+                                              color: subtitleColor,
+                                            ),
+                                            const SizedBox(width: 5),
+                                            Text(
+                                              'Applied on $dateStr',
+                                              style: TextStyle(
+                                                color: subtitleColor,
+                                                fontSize: 12.5,
+                                              ),
+                                            ),
+                                          ],
+                                          if (dateStr != null &&
+                                              app.deadline.isNotEmpty)
+                                            Text(
+                                              '   ·   ',
+                                              style: TextStyle(
+                                                color: subtitleColor,
+                                                fontSize: 12,
+                                              ),
+                                            ),
+                                          if (app.deadline.isNotEmpty) ...[
+                                            Icon(
+                                              Icons.schedule_outlined,
+                                              size: 13,
+                                              color: subtitleColor,
+                                            ),
+                                            const SizedBox(width: 5),
+                                            Text(
+                                              'Deadline: ${app.deadline.split('T').first}',
+                                              style: TextStyle(
+                                                color: subtitleColor,
+                                                fontSize: 12.5,
+                                              ),
+                                            ),
+                                          ],
+                                          const Spacer(),
+                                          if (app.auditionId.isNotEmpty)
+                                            TextButton.icon(
+                                              onPressed: () {
+                                                context.push(
+                                                  AppRoutes.auditionDetails,
+                                                  extra: app.auditionId,
+                                                );
+                                              },
+                                              icon: const Icon(
+                                                Icons.visibility_outlined,
+                                                size: 14,
+                                              ),
+                                              label: const Text(
+                                                  'View Audition Details'),
+                                              style: TextButton.styleFrom(
+                                                foregroundColor:
+                                                    AppColors.primary,
+                                                textStyle: const TextStyle(
+                                                  fontSize: 12.5,
+                                                  fontWeight: FontWeight.w600,
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatusFilterChip({
+    required String label,
+    required String filterKey,
+    required bool isDark,
+  }) {
+    final isSelected = _selectedStatusFilter == filterKey;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedStatusFilter = filterKey;
+        });
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary
+              : (isDark
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.black.withValues(alpha: 0.04)),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.primary
+                : (isDark
+                    ? Colors.white.withValues(alpha: 0.1)
+                    : const Color(0xFFCBD5E1)),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected
+                ? Colors.white
+                : (isDark ? Colors.white70 : const Color(0xFF475569)),
+          ),
         ),
       ),
     );

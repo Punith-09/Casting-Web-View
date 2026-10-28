@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart' show Share;
 
 import '../../core/constants/app_colors.dart';
 import '../../core/routes/app_routes.dart';
+import '../../core/routes/app_router.dart';
 import '../../features/artist_profile/presentation/providers/profile_provider.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/explore/presentation/providers/explore_provider.dart';
@@ -26,7 +27,6 @@ class AppSidebar extends StatelessWidget {
     final profileProvider = context.read<ProfileProvider>();
     final homeFeedProvider = context.read<HomeFeedProvider>();
     final exploreProvider = context.read<ExploreProvider>();
-    final router = GoRouter.of(context);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     Navigator.of(context).pop();
@@ -142,9 +142,13 @@ class AppSidebar extends StatelessWidget {
       exploreProvider.clearForLogout();
     } catch (e) {
       debugPrint('Logout error: $e');
-    } finally {
-      router.go(AppRoutes.login);
     }
+
+    // Wait for the frame triggered by provider.clear() → notifyListeners() to
+    // complete before navigating. Global appRouter → no mounted check needed.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      appRouter.go(AppRoutes.login);
+    });
   }
 
   void _showInviteSheet(BuildContext context) {

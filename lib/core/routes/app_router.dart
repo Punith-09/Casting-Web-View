@@ -57,10 +57,20 @@ final GoRouter appRouter = GoRouter(
 
     final isAuthRoute =
         location == AppRoutes.welcome ||
-        location == AppRoutes.login;
+        location == AppRoutes.login ||
+        location == AppRoutes.signup ||
+        location.startsWith('/auth/') ||
+        location.startsWith('/reset') ||
+        location.startsWith('/delete');
 
-    if (isLoggedIn && isAuthRoute) {
+    // Redirect logged-in users away from auth screens.
+    if (isLoggedIn && (location == AppRoutes.welcome || location == AppRoutes.login)) {
       return AppRoutes.home;
+    }
+
+    // Redirect unauthenticated users away from protected screens.
+    if (!isLoggedIn && !isAuthRoute) {
+      return AppRoutes.login;
     }
 
     return null; // no redirect needed

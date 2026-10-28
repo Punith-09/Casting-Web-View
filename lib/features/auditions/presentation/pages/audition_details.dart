@@ -738,6 +738,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../../../../core/api/api_endpoints.dart';
+import '../../../../core/responsive/responsive_breakpoints.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../../core/storage/local_storage.dart';
 import '../../../../core/theme/theme_provider.dart';
@@ -1715,23 +1716,36 @@ class _AuditionDetailsState extends State<AuditionDetails> {
       item.deadline,
     );
 
-    final displayAge = _deriveAge(item);
-
-    final displayGender = _deriveGender(item);
-
-    final displayExperience =
-    _deriveExperience(item);
-
-    final displayLanguage =
-    _deriveLanguage(item);
-
-    final displaySkills =
-    _deriveSkills(item);
-
     final displayDescription =
     item.description.isNotEmpty
         ? item.description
         : "We are looking for a female actor for the lead role in an upcoming short film. Candidates should be comfortable with dialogue delivery and expressive acting.";
+
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+
+    if (isDesktop) {
+      return Scaffold(
+        backgroundColor:
+            _isDark ? const Color(0xFF0B0F17) : const Color(0xFFF1F5F9),
+        body: SafeArea(
+          child: _buildDesktopLayout(
+            context,
+            item,
+            isLoading,
+            errorMessage,
+            isMyAudition,
+            displayTitle,
+            displaySubtitle,
+            displayLocation,
+            displayPay,
+            displayDeadline,
+            displayAuditionDate,
+            displayDescription,
+            auditionsProvider,
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       backgroundColor:
@@ -2078,6 +2092,603 @@ class _AuditionDetailsState extends State<AuditionDetails> {
           ],
         ),
       ),
+    );
+  }
+
+  // ===========================================================================
+  // DESKTOP LAYOUT (Web View)
+  // ===========================================================================
+
+  Widget _buildDesktopLayout(
+    BuildContext context,
+    AuditionModel item,
+    bool isLoading,
+    String? errorMessage,
+    bool isMyAudition,
+    String displayTitle,
+    String displaySubtitle,
+    String displayLocation,
+    String displayPay,
+    String displayDeadline,
+    String displayAuditionDate,
+    String displayDescription,
+    AuditionsProvider auditionsProvider,
+  ) {
+    if (isLoading) {
+      return Column(
+        children: [
+          _buildDesktopTopBar(context, item, isMyAudition),
+          const Expanded(
+            child: Center(
+              child: CircularProgressIndicator(color: _primaryOrange),
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (errorMessage != null && auditionsProvider.selectedAudition == null) {
+      return Column(
+        children: [
+          _buildDesktopTopBar(context, item, isMyAudition),
+          Expanded(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      errorMessage,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.redAccent, fontSize: 16),
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _primaryOrange,
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () {
+                        final targetId = widget.auditionId ?? widget.audition?.id;
+                        if (targetId != null) {
+                          context.read<AuditionsProvider>().fetchAuditionById(targetId);
+                        }
+                      },
+                      child: const Text("Retry"),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        _buildDesktopTopBar(context, item, isMyAudition),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 28),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1040),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Main Content (65% width)
+                    Expanded(
+                      flex: 65,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Title & Role Card
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: _cardBg,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: _borderColor, width: 1),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: _isDark ? 0.3 : 0.04),
+                                  blurRadius: 16,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                      decoration: BoxDecoration(
+                                        color: _primaryOrange.withValues(alpha: 0.15),
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Text(
+                                        item.category.isNotEmpty ? item.category : 'Audition',
+                                        style: const TextStyle(
+                                          color: _primaryOrange,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ),
+                                    if (item.role.isNotEmpty) ...[
+                                      const SizedBox(width: 8),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: _isDark
+                                              ? Colors.white.withValues(alpha: 0.08)
+                                              : Colors.black.withValues(alpha: 0.05),
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          item.role,
+                                          style: TextStyle(
+                                            color: _isDark ? Colors.white70 : const Color(0xFF475569),
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 14),
+                                Text(
+                                  displayTitle,
+                                  style: TextStyle(
+                                    color: _primaryText,
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: -0.3,
+                                  ),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  displaySubtitle,
+                                  style: const TextStyle(
+                                    color: _primaryOrange,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // 4 Column Stat Card
+                          Container(
+                            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: _cardBg,
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: _borderColor, width: 1),
+                            ),
+                            child: IntrinsicHeight(
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildStatItem(
+                                      icon: Icons.location_on_outlined,
+                                      label: "Location",
+                                      value: displayLocation,
+                                    ),
+                                  ),
+                                  _buildDivider(),
+                                  Expanded(
+                                    child: _buildStatItem(
+                                      icon: Icons.currency_rupee,
+                                      label: "Pay",
+                                      value: displayPay,
+                                    ),
+                                  ),
+                                  _buildDivider(),
+                                  Expanded(
+                                    child: _buildStatItem(
+                                      icon: Icons.calendar_today_outlined,
+                                      label: "Deadline",
+                                      value: displayDeadline,
+                                    ),
+                                  ),
+                                  _buildDivider(),
+                                  Expanded(
+                                    child: _buildStatItem(
+                                      icon: Icons.calendar_month_outlined,
+                                      label: "Audition Date",
+                                      value: displayAuditionDate,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // About Section
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(22),
+                            decoration: BoxDecoration(
+                              color: _cardBg,
+                              borderRadius: BorderRadius.circular(18),
+                              border: Border.all(color: _borderColor, width: 1),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildSectionHeader("About the Audition"),
+                                const SizedBox(height: 12),
+                                Text(
+                                  displayDescription,
+                                  style: TextStyle(
+                                    color: _secondaryText,
+                                    fontSize: 14,
+                                    height: 1.6,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Applicants section (if creator or has applicants)
+                          if (isMyAudition || item.applicants.isNotEmpty) ...[
+                            const SizedBox(height: 24),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(22),
+                              decoration: BoxDecoration(
+                                color: _cardBg,
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: _borderColor, width: 1),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      _buildSectionHeader("Applicants (${item.applicantsCount})"),
+                                      if (item.applicants.isNotEmpty)
+                                        Text(
+                                          "${item.applicants.length} reviewed",
+                                          style: TextStyle(
+                                            color: _labelGrey,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+                                  if (item.applicants.isEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 24),
+                                      child: Center(
+                                        child: Column(
+                                          children: [
+                                            Icon(
+                                              Icons.people_outline_rounded,
+                                              size: 40,
+                                              color: _labelGrey.withValues(alpha: 0.6),
+                                            ),
+                                            const SizedBox(height: 10),
+                                            Text(
+                                              "No applicants yet",
+                                              style: TextStyle(
+                                                color: _primaryText,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 15,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              "When candidates apply, their profiles and audition reels will appear here.",
+                                              style: TextStyle(
+                                                color: _labelGrey,
+                                                fontSize: 12.5,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    ...item.applicants.map((a) => _buildApplicantCard(a)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(width: 28),
+
+                    // Right Sidebar (35% width)
+                    Expanded(
+                      flex: 35,
+                      child: Column(
+                        children: [
+                          if (!isMyAudition) ...[
+                            // Candidate Apply Box
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(22),
+                              decoration: BoxDecoration(
+                                color: _cardBg,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: _borderColor, width: 1),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: _isDark ? 0.35 : 0.04),
+                                    blurRadius: 18,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Ready to Apply?",
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w700,
+                                      color: _primaryText,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    "Submit your profile and cover note to the casting team.",
+                                    style: TextStyle(
+                                      fontSize: 12.5,
+                                      color: _secondaryText,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Divider(color: _borderColor, height: 1),
+                                  const SizedBox(height: 16),
+                                  _buildSidebarInfoRow(Icons.currency_rupee, "Compensation", displayPay),
+                                  const SizedBox(height: 12),
+                                  _buildSidebarInfoRow(Icons.location_on_outlined, "Location", displayLocation),
+                                  const SizedBox(height: 12),
+                                  _buildSidebarInfoRow(Icons.schedule_outlined, "Deadline", displayDeadline),
+                                  const SizedBox(height: 24),
+                                  // BottomActionBar widget
+                                  BottomActionBar(audition: item),
+                                ],
+                              ),
+                            ),
+                          ] else ...[
+                            // Creator Management Box
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(22),
+                              decoration: BoxDecoration(
+                                color: _cardBg,
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: _borderColor, width: 1),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: _isDark ? 0.35 : 0.04),
+                                    blurRadius: 18,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        "Audition Overview",
+                                        style: TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w700,
+                                          color: _primaryText,
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFF10B981).withValues(alpha: 0.14),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            CircleAvatar(radius: 3, backgroundColor: Color(0xFF10B981)),
+                                            SizedBox(width: 5),
+                                            Text(
+                                              "Live",
+                                              style: TextStyle(
+                                                color: Color(0xFF10B981),
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 18),
+                                  Divider(color: _borderColor, height: 1),
+                                  const SizedBox(height: 16),
+                                  _buildSidebarInfoRow(Icons.people_outline_rounded, "Total Applicants", "${item.applicantsCount}"),
+                                  const SizedBox(height: 12),
+                                  _buildSidebarInfoRow(Icons.category_outlined, "Role Category", item.category.isNotEmpty ? item.category : 'General'),
+                                  const SizedBox(height: 12),
+                                  _buildSidebarInfoRow(Icons.calendar_today_outlined, "Application Deadline", displayDeadline),
+                                  const SizedBox(height: 20),
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: _primaryOrange.withValues(alpha: 0.08),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: _primaryOrange.withValues(alpha: 0.2)),
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Icon(Icons.info_outline_rounded, size: 16, color: _primaryOrange),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            "You can shortlist or reject applicants on this page. Shortlisted artists will see the updated status.",
+                                            style: TextStyle(
+                                              color: _isDark ? Colors.white70 : const Color(0xFF334155),
+                                              fontSize: 12,
+                                              height: 1.4,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDesktopTopBar(BuildContext context, AuditionModel item, bool isMyAudition) {
+    return Container(
+      height: 64,
+      padding: const EdgeInsets.symmetric(horizontal: 28),
+      decoration: BoxDecoration(
+        color: _isDark ? const Color(0xFF161C26) : Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: _isDark ? const Color(0xFF263040) : const Color(0xFFE2E8F0),
+            width: 1,
+          ),
+        ),
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1040),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              InkWell(
+                onTap: () {
+                  if (Navigator.of(context).canPop()) {
+                    context.pop();
+                  } else {
+                    context.go(AppRoutes.auditions);
+                  }
+                },
+                borderRadius: BorderRadius.circular(10),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        size: 16,
+                        color: _primaryText,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Back to Auditions',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: _primaryText,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Text(
+                isMyAudition ? 'My Posted Audition' : 'Audition Details',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: _primaryText,
+                ),
+              ),
+              if (isMyAudition)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: _primaryOrange.withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: _primaryOrange.withValues(alpha: 0.3)),
+                  ),
+                  child: Text(
+                    '${item.applicantsCount} Applicants',
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: _primaryOrange,
+                    ),
+                  ),
+                )
+              else
+                const SizedBox(width: 140),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSidebarInfoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: _primaryOrange),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(color: _labelGrey, fontSize: 11),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  color: _primaryText,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
