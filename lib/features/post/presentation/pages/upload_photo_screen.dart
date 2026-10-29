@@ -12,6 +12,7 @@ import 'package:provider/provider.dart';
 import '../../../../common/widgets/app_background.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/di/injection_container.dart';
+import '../../../../core/responsive/desktop_shell.dart';
 import '../../../../core/responsive/responsive_breakpoints.dart';
 import '../../../../core/routes/app_routes.dart';
 import '../../../artist_profile/data/models/portfolio_model.dart';
@@ -281,7 +282,10 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
 
     // ── DESKTOP / WEB VIEW ─────────────────────────────────────────────
     if (isDesktop) {
-      return _buildDesktopView(context, isDark, isUploading);
+      return DesktopShell(
+        currentLocation: AppRoutes.uploadPhoto,
+        child: _buildDesktopView(context, isDark, isUploading),
+      );
     }
 
     // ── MOBILE VIEW (100% UNCHANGED) ──────────────────────────────────
@@ -382,7 +386,9 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
                 // Desktop Header with Back button and subtitle
                 Row(
                   children: [
-                    InkWell(
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
                       borderRadius: BorderRadius.circular(10),
                       onTap: () {
                         if (Navigator.of(context).canPop()) {
@@ -404,6 +410,7 @@ class _UploadPhotoScreenState extends State<UploadPhotoScreen> {
                         ),
                       ),
                     ),
+                  ),
                     const SizedBox(width: 14),
                     Expanded(
                       child: Column(
