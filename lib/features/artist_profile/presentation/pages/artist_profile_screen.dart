@@ -57,6 +57,7 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen>
 
   Future<void> _logout() async {
     // Capture everything from context BEFORE any await
+    final isDesktop = ResponsiveBreakpoints.isDesktop(context);
     final isDark = context.read<ThemeProvider>().isDarkMode;
     final authProvider = context.read<AuthProvider>();
     final profileProvider = context.read<ProfileProvider>();
@@ -202,6 +203,33 @@ class _ArtistProfileScreenState extends State<ArtistProfileScreen>
     // }
 
     if (confirmed != true) return;
+
+    if (isDesktop) {
+      // 1. Immediately clear local storage so hasToken() returns false for GoRouter
+      try {
+        await LocalStorage.instance.clearAll();
+      } catch (e) {
+        debugPrint('LocalStorage clearAll error: $e');
+      }
+
+      // 2. Clear user-specific providers
+      profileProvider.clear();
+      homeFeedProvider.clear();
+      exploreProvider.clearForLogout();
+
+      // 3. Trigger authProvider.logout() in background with timeout so it cannot block navigation
+      authProvider.logout().timeout(const Duration(seconds: 1)).catchError((e) {
+        debugPrint('AuthProvider logout error: $e');
+      });
+
+      // 4. Instantly navigate to login screen on web/desktop
+      if (mounted) {
+        context.go(AppRoutes.login);
+      } else {
+        appRouter.go(AppRoutes.login);
+      }
+      return;
+    }
 
     try {
       await authProvider.logout();

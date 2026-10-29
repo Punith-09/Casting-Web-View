@@ -78,12 +78,12 @@ class GoogleAuthDataSource {
 
   Future<void> signOut() async {
     try {
-      await _googleSignIn.signOut();
+      await _googleSignIn.signOut().timeout(const Duration(seconds: 1));
     } catch (e) {
       debugPrint('GoogleSignIn signOut error (ignored): $e');
     }
     try {
-      await _firebaseAuth.signOut();
+      await _firebaseAuth.signOut().timeout(const Duration(seconds: 1));
     } catch (e) {
       debugPrint('FirebaseAuth signOut error (ignored): $e');
     }
